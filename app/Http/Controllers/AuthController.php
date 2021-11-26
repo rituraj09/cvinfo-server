@@ -56,32 +56,49 @@ class AuthController extends Controller
     }
     public function login(Request $request)
     {
-        if(!Auth::attempt($request->only('email','password')))
+        $validator = Validator::make($request->all(),[ 
+            'email' => 'required|email',
+            'password' => 'required', 
+        ]);
+        if($validator->fails())
         {
-            return response([
-                'message' =>'Invalid Credentials'
-            ],Response::HTTP_UNAUTHORIZED);
+            return response()->json([
+                'validation_errors' =>$validator->messages(),
+            ]);
         }
-        $user = Auth::user();
-        $token = $user->createToken('token')->plainTextToken; 
-        $cookie = cookie('jwt', $token, 60 * 24); // 1 day
-        $user= Auth::user();
-        return response([
-            'message' =>  'success',
-            'name' =>  $user->name,
-            'authid' =>  $user->id,
-        ])->withCookie($cookie);
+        else
+        {
+            $user = User::where('email', $request->email)->first();
+            if (! $user || ! Hash::check($request->password, $user->password)) {
+                return response()->json([ 
+                    'status' => 401, 
+                    'message'=>'Invalid Credentials', 
+                ]);
+            }
+            else
+            {
+                $token = $user->createToken($user->email.'_Token')->plainTextToken; 
+               // $cookie = cookie('jwt', $token, 60 * 24); // 1 day
+                return response()->json([
+                    'status' => 200,
+                    'username'=> $user->name,
+                    'token'=>$token,
+                    'message'=>'Logged In Successfully',
+                ]);
+            }  
+        } 
     }
     public function user()
     {
         return Auth::user();
     }
     public function logout()
-    {
-        $cookie = Cookie::forget('jwt');
+    { 
+        auth()->user()->tokens()->delete();
 
         return response([
-            'message' => 'Success'
-        ])->withCookie($cookie);
+            'status' => 200,
+            'message' => 'Successfully Logged out'
+        ]);
     }
 }
