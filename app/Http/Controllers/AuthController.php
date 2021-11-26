@@ -7,40 +7,52 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth; 
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash; 
+use Illuminate\Support\Facades\Validator; 
 use Symfony\Component\HttpFoundation\Response;
 use App\Models\User;
 class AuthController extends Controller
 {
-    public function register(Request $req)
-    {
-        $user = new User;
-        if(($req->name=="" || $req->email=="")|| $req->password=="")
+    public function register(Request $request)
+    { 
+        $validator = Validator::make($request->all(),[
+            'name' => 'required|max:100',
+            'email' => 'required|email|max:191|unique:users,email',
+            'password' => 'required|min:6', 
+        ]);
+        if($validator->fails())
         {
-            return 3;
+            return response()->json([
+                'validation_errors' =>$validator->messages(),
+            ]);
         }
         else
         {
-            $data =  $user->where(['email'=>$req->email])->count();
-            if($data > 0)
+            if($request->status==false)
             {
-                return 2;
+                return response()->json([
+                    'status' => 201,
+                    'message'=>'Please accept the terms and Condition!',
+                ]);
             }
             else
             {
-                $user->name = $req->name;
-                $user->email= $req->email;
-                $user->password = Hash::make($req->password);
-                $result = $user->save();
-                if($result)
-                {
-                    return 1;
-                }
-                else
-                {
-                    return 0;
-                }
-            } 
+                $user=User::create([
+                    'name'=>$request->name,
+                    'email'=>$request->email,
+                    'password'=>Hash::make($request->password),
+    
+                ]); 
+                $token = $user->createToken($user->email.'_Token')->plainTextToken; 
+                return response()->json([
+                    'status' => 200,
+                    'username'=> $user->name,
+                    'token'=>$token,
+                    'message'=>'Registered Successfully',
+                ]);
+            }
+           
         }
+         
     }
     public function login(Request $request)
     {
