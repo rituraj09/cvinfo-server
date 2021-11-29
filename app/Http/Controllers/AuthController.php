@@ -76,9 +76,8 @@ class AuthController extends Controller
                 ]);
             }
             else
-            {
-                $token = $user->createToken($user->email.'_Token')->plainTextToken; 
-               // $cookie = cookie('jwt', $token, 60 * 24); // 1 day
+            { 
+                $token = $user->createToken($user->email.'_Token')->plainTextToken;  
                 return response()->json([
                     'status' => 200,
                     'username'=> $user->name,
